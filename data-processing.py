@@ -3,10 +3,17 @@ import numpy as np
 import pandas as pd
 
 housing = datasets.fetch_california_housing(as_frame=True)
-housing_data = housing['data']
-housing_target = housing['target']
+housing_data: pd.DataFrame = housing['data']
+housing_target: pd.DataFrame = housing['target']
+housing_total_data: pd.DataFrame = pd.concat(
+    [housing_data, housing_target], axis=1)
 
-housing_data.info()
+housing_total_data.info()
+print(housing_data.describe())
+
+print('housing_total_data', housing_total_data)
+print('housing_data', housing_data)
+print('housing_target', housing_target)
 
 housing_data['IncomeCat'] = pd.cut(
     housing_data['MedInc'],
@@ -23,7 +30,7 @@ X_train, X_test, y_train, y_test = model_selection.train_test_split(
 for X_set in (X_train, X_test):
     X_set.drop('IncomeCat', axis=1, inplace=True)
 
-print('data train:\n', X_train)
-print('target train:\n', y_train)
-print('data test:\n', X_test)
-print('target test:\n', y_test)
+# Compute the standard correlation coefficient between each
+# attribute and MedHouseVal
+corr_matrix = housing_total_data.corr()
+print(corr_matrix['MedHouseVal'].sort_values(ascending=False))
