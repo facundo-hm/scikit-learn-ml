@@ -115,4 +115,4 @@ columns_transformer = compose.ColumnTransformer([
     ],
     remainder=default_pipeline
 )
-X_columns_processed = columns_transformer.fit_transform(X)
+# X_columns_processed = columns_transformer.fit_transform(X)
