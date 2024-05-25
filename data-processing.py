@@ -74,6 +74,10 @@ class ClusterSimilarity(base.BaseEstimator, base.TransformerMixin):
         return metrics.pairwise.rbf_kernel(
             X, self.kmeans_.cluster_centers_, gamma=self.gamma)
 
+    def get_feature_names_out(self, names=None):
+        return [
+            f'Cluster {i} similarity' for i in range(self.n_clusters)]
+
 cluster_simil = ClusterSimilarity(
     n_clusters=10, gamma=1., random_state=42)
 similarities = cluster_simil.fit_transform(
@@ -98,11 +102,17 @@ log_pipeline = pipeline.make_pipeline(
         np.log, feature_names_out='one-to-one'),
     preprocessing.StandardScaler()
 )
-log_columns_transformer = compose.make_column_transformer(
-    (log_pipeline, ['MedInc', 'AveRooms', 'AveBedrms',
+cluster_pipeline = ClusterSimilarity(
+    n_clusters=10, gamma=1., random_state=42)
+default_pipeline = pipeline.make_pipeline(
+    impute.SimpleImputer(strategy='median'),
+    preprocessing.StandardScaler())
+
+columns_transformer = compose.ColumnTransformer([
+    ('log', log_pipeline, ['MedInc', 'AveRooms', 'AveBedrms',
         'Population', 'AveOccup']),
-    remainder='passthrough'
+    ('geo', cluster_pipeline, ['Latitude', 'Longitude'])
+    ],
+    remainder=default_pipeline
 )
-X_prepared = log_columns_transformer.fit_transform(X)
-print(X_prepared[:3])
-print(log_columns_transformer.get_feature_names_out())
+X_columns_processed = columns_transformer.fit_transform(X)
