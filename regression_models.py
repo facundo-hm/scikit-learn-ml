@@ -52,3 +52,22 @@ forest_rmses = model_selection.cross_val_score(
     scoring='neg_root_mean_squared_error',
     cv=10)
 print('forest_rmses', forest_rmses)
+
+grid_pipeline = pipeline.Pipeline([
+    ('columns_transformer', columns_transformer),
+    ('random_forest', ensemble.RandomForestRegressor(
+        random_state=42))
+])
+param_grid = [
+    {'columns_transformer__geo__n_clusters': [5, 8, 10],
+    'random_forest__max_features': [4, 6, 8]},
+    {'columns_transformer__geo__n_clusters': [10, 15],
+    'random_forest__max_features': [6, 8, 10]}]
+
+grid_search = model_selection.GridSearchCV(
+    grid_pipeline,
+    param_grid,
+    cv=3,
+    scoring='neg_root_mean_squared_error')
+grid_search.fit(X_train, y_train)
+print('grid_search.best_params_', grid_search.best_params_)
