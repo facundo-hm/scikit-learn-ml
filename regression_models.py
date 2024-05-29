@@ -1,6 +1,8 @@
 from sklearn import (
     linear_model, pipeline, metrics, tree, model_selection, ensemble)
-from data_processing import X_train, y_train, columns_transformer
+from scipy.stats import randint
+from data_processing import (
+    X_train, y_train, X_test, y_test, columns_transformer)
 
 lin_reg = pipeline.make_pipeline(
     columns_transformer, linear_model.LinearRegression())
@@ -42,32 +44,37 @@ tree_rmses = model_selection.cross_val_score(
     cv=10)
 print('tree_rmses', tree_rmses)
 
-forest_reg = pipeline.make_pipeline(
-    columns_transformer,
-    ensemble.RandomForestRegressor(random_state=42))
+forest_reg_pipeline = pipeline.Pipeline([
+    ('columns_transformer', columns_transformer),
+    ('random_forest', ensemble.RandomForestRegressor(
+        random_state=42))
+])
+
 forest_rmses = model_selection.cross_val_score(
-    forest_reg,
+    forest_reg_pipeline,
     X_train,
     y_train,
     scoring='neg_root_mean_squared_error',
     cv=10)
 print('forest_rmses', forest_rmses)
 
-grid_pipeline = pipeline.Pipeline([
-    ('columns_transformer', columns_transformer),
-    ('random_forest', ensemble.RandomForestRegressor(
-        random_state=42))
-])
-param_grid = [
-    {'columns_transformer__geo__n_clusters': [5, 8, 10],
-    'random_forest__max_features': [4, 6, 8]},
-    {'columns_transformer__geo__n_clusters': [10, 15],
-    'random_forest__max_features': [6, 8, 10]}]
+rnd_param = {
+    'columns_transformer__geo__n_clusters': randint(low=3, high=50),
+    'random_forest__max_features': randint(low=2, high=20)}
 
-grid_search = model_selection.GridSearchCV(
-    grid_pipeline,
-    param_grid,
+rnd_search = model_selection.RandomizedSearchCV(
+    forest_reg_pipeline,
+    param_distributions=rnd_param,
+    n_iter=10,
     cv=3,
-    scoring='neg_root_mean_squared_error')
-grid_search.fit(X_train, y_train)
-print('grid_search.best_params_', grid_search.best_params_)
+    scoring='neg_root_mean_squared_error',
+    random_state=42)
+rnd_search.fit(X_train, y_train)
+print('rnd_search.best_params_', rnd_search.best_params_)
+
+forest_reg_model = rnd_search.best_estimator_
+forest_reg_predictions = forest_reg_model.predict(X_test)
+
+forest_reg_rmse = metrics.root_mean_squared_error(
+    y_test, forest_reg_predictions, squared=False)
+print('forest_reg_rmse', forest_reg_rmse)
