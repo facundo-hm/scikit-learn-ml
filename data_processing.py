@@ -1,3 +1,4 @@
+from typing import cast
 from sklearn import (
     datasets, model_selection, preprocessing,
     metrics, base, cluster, compose, pipeline,
@@ -24,8 +25,10 @@ X['IncomeCat'] = pd.cut(
     bins=[0., 1.5, 3.0, 4.5, 6., np.inf],
     labels=[1, 2, 3, 4, 5])
 
-X_train, X_test, y_train, y_test = model_selection.train_test_split(
-    X, y, test_size=0.2, stratify=X['IncomeCat'], random_state=42)
+X_train, X_test, y_train, y_test = cast(
+    list[np.ndarray],
+    model_selection.train_test_split(
+        X, y, test_size=0.2, stratify=X['IncomeCat'], random_state=42))
 
 for X_set in (X, X_train, X_test):
     X_set.drop('IncomeCat', axis=1, inplace=True)
