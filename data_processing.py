@@ -2,13 +2,14 @@ from typing import cast
 from sklearn import (
     datasets, model_selection, preprocessing,
     metrics, base, cluster, compose, pipeline,
-    impute)
+    impute, utils)
 import numpy as np
 import pandas as pd
 
-housing = datasets.fetch_california_housing(as_frame=True)
-X: pd.DataFrame = housing['data']
-y: pd.Series = housing['target']
+housing = cast(
+    utils.Bunch, datasets.fetch_california_housing(as_frame=True))
+X = cast(pd.DataFrame, housing['data'])
+y = cast(pd.Series, housing['target'])
 housing_X_y: pd.DataFrame = pd.concat([X, y], axis=1)
 
 housing_X_y.info()
@@ -26,7 +27,7 @@ X['IncomeCat'] = pd.cut(
     labels=[1, 2, 3, 4, 5])
 
 X_train, X_test, y_train, y_test = cast(
-    list[np.ndarray],
+    list[pd.DataFrame],
     model_selection.train_test_split(
         X, y, test_size=0.2, stratify=X['IncomeCat'], random_state=42))
 
@@ -44,7 +45,7 @@ sf_coords = 37.7749, -122.41
 sf_transformer = preprocessing.FunctionTransformer(
     metrics.pairwise.rbf_kernel,
     kw_args=dict(Y=[sf_coords], gamma=0.1))
-sf_simil: np.ndarray = sf_transformer.transform(
+sf_simil = sf_transformer.transform(
     X[['Latitude', 'Longitude']])
 
 # Custom class transformer.
