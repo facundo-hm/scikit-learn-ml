@@ -1,13 +1,19 @@
 from typing import cast
-from sklearn import (
-    datasets, model_selection, preprocessing,
-    metrics, base, cluster, compose, pipeline,
-    impute, utils)
+from sklearn.datasets import fetch_california_housing
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler, FunctionTransformer
+from sklearn.metrics import pairwise
+from sklearn.base import BaseEstimator, TransformerMixin
+from sklearn.cluster import KMeans
+from sklearn.compose import (
+    make_column_transformer, make_column_selector, ColumnTransformer)
+from sklearn.pipeline import make_pipeline
+from sklearn.impute import SimpleImputer
+from sklearn.utils import Bunch
 import numpy as np
 import pandas as pd
 
-housing = cast(
-    utils.Bunch, datasets.fetch_california_housing(as_frame=True))
+housing = cast(Bunch, fetch_california_housing(as_frame=True))
 X = cast(pd.DataFrame, housing['data'])
 y = cast(pd.Series, housing['target'])
 housing_X_y: pd.DataFrame = pd.concat([X, y], axis=1)
@@ -16,8 +22,8 @@ housing_X_y.info()
 print('housing_X_y', housing_X_y)
 
 # Scale data and target values
-data_scaler = preprocessing.StandardScaler()
-target_scaler = preprocessing.StandardScaler()
+data_scaler = StandardScaler()
+target_scaler = StandardScaler()
 X_scaled = data_scaler.fit_transform(X)
 y_scaled = target_scaler.fit_transform(y.to_frame())
 
@@ -28,7 +34,7 @@ X['IncomeCat'] = pd.cut(
 
 X_train, X_test, y_train, y_test = cast(
     list[pd.DataFrame],
-    model_selection.train_test_split(
+    train_test_split(
         X, y, test_size=0.2, stratify=X['IncomeCat'], random_state=42))
 
 for X_set in (X, X_train, X_test):
@@ -42,18 +48,17 @@ print(corr_matrix['MedHouseVal'].sort_values(ascending=False))
 # Use custom transformer to create a feature that measure
 # the geographic similarity between each district and San Francisco
 sf_coords = 37.7749, -122.41
-sf_transformer = preprocessing.FunctionTransformer(
-    metrics.pairwise.rbf_kernel,
+sf_transformer = FunctionTransformer(
+    pairwise.rbf_kernel,
     kw_args=dict(Y=[sf_coords], gamma=0.1))
-sf_simil = sf_transformer.transform(
-    X[['Latitude', 'Longitude']])
+sf_simil = sf_transformer.transform(X[['Latitude', 'Longitude']])
 
 # Custom class transformer.
 # Use KMeans clusterer in the fit() method to identify the main
 # clusters in the training data.
 # Use rbf_kernel() in thetransform() method to measure how similar
 # each sample is to each cluster center.
-class ClusterSimilarity(base.BaseEstimator, base.TransformerMixin):
+class ClusterSimilarity(BaseEstimator, TransformerMixin):
     def __init__(
         self, n_clusters=10, gamma=1.0, random_state: int = None
     ):
@@ -65,7 +70,7 @@ class ClusterSimilarity(base.BaseEstimator, base.TransformerMixin):
         self, X: np.ndarray, y=None, sample_weight: np.ndarray = None
     ):
         # Locate the clusters
-        self.kmeans_ = cluster.KMeans(
+        self.kmeans_ = KMeans(
             self.n_clusters, random_state=self.random_state)
         # Weight each district by its median house value
         self.kmeans_.fit(X, sample_weight=sample_weight)
@@ -75,7 +80,7 @@ class ClusterSimilarity(base.BaseEstimator, base.TransformerMixin):
     def transform(self, X: np.ndarray):
         # Measure the Gaussian RBF similarity between each district
         # and all 10 cluster centers
-        return metrics.pairwise.rbf_kernel(
+        return pairwise.rbf_kernel(
             X, self.kmeans_.cluster_centers_, gamma=self.gamma)
 
     def get_feature_names_out(self, names=None):
@@ -88,35 +93,33 @@ similarities = cluster_simil.fit_transform(
     X[['Latitude', 'Longitude']], sample_weight=y)
 
 # Create a transformation pipeline
-num_pipeline = pipeline.make_pipeline(
-    impute.SimpleImputer(strategy='median'),
-    preprocessing.StandardScaler())
-column_selector = compose.make_column_selector(
+num_pipeline = make_pipeline(
+    SimpleImputer(strategy='median'),
+    StandardScaler())
+column_selector = make_column_selector(
     dtype_include=np.number)
 # Transform numerical columns
-num_columns_transformer = compose.make_column_transformer(
+num_columns_transformer = make_column_transformer(
     (num_pipeline, column_selector)
 )
 X_num_columns_processed = num_columns_transformer.fit_transform(X)
 
 
-log_pipeline = pipeline.make_pipeline(
-    impute.SimpleImputer(strategy='median'),
-    preprocessing.FunctionTransformer(
-        np.log, feature_names_out='one-to-one'),
-    preprocessing.StandardScaler()
+log_pipeline = make_pipeline(
+    SimpleImputer(strategy='median'),
+    FunctionTransformer(np.log, feature_names_out='one-to-one'),
+    StandardScaler()
 )
 cluster_pipeline = ClusterSimilarity(
     n_clusters=10, gamma=1., random_state=42)
-default_pipeline = pipeline.make_pipeline(
-    impute.SimpleImputer(strategy='median'),
-    preprocessing.StandardScaler())
+default_pipeline = make_pipeline(
+    SimpleImputer(strategy='median'),
+    StandardScaler())
 
-columns_transformer = compose.ColumnTransformer([
+columns_transformer = ColumnTransformer([
     ('log', log_pipeline, ['MedInc', 'AveRooms', 'AveBedrms',
         'Population', 'AveOccup']),
-    ('geo', cluster_pipeline, ['Latitude', 'Longitude'])
-    ],
+    ('geo', cluster_pipeline, ['Latitude', 'Longitude'])],
     remainder=default_pipeline
 )
 # X_columns_processed = columns_transformer.fit_transform(X)
