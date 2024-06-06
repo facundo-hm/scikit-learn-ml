@@ -4,10 +4,11 @@ from sklearn.model_selection import train_test_split, cross_val_predict
 from sklearn.linear_model import SGDClassifier
 from sklearn.metrics import (
     confusion_matrix, precision_recall_curve, precision_score,
-    recall_score, roc_auc_score, f1_score)
+    recall_score, roc_auc_score, f1_score, ConfusionMatrixDisplay)
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.svm import SVC
 import numpy as np
+import matplotlib.pyplot as plt
 
 mnist = fetch_openml('mnist_784', as_frame=False)
 X, y = cast(np.ndarray, mnist.data), cast(np.ndarray, mnist.target)
@@ -68,4 +69,14 @@ y_roc_score_forest = roc_auc_score(
 svm = SVC(random_state=42)
 svm.fit(X_train[:2000], y_train[:2000])
 svm_prediction = svm.predict([X_train[2000]])
-print('svm_prediction', svm_prediction, y_train[2000])
+svm_prediction_scores = svm.decision_function([X_train[2000]])
+
+y_train_pred = cross_val_predict(sgd, X_train[:2000], y_train[:2000], cv=2)
+sample_weight = (y_train_pred != y_train[:2000])
+ConfusionMatrixDisplay.from_predictions(
+    y_train[:2000],
+    y_train_pred,
+    sample_weight=sample_weight,
+    normalize='true',
+    values_format='.0%')
+plt.savefig('sgd_confusion_matrix')
