@@ -7,11 +7,16 @@ from sklearn.metrics import (
     recall_score, roc_auc_score, f1_score, ConfusionMatrixDisplay)
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.svm import SVC
+from sklearn.preprocessing import StandardScaler
+from sklearn.neighbors import KNeighborsClassifier
 import numpy as np
 import matplotlib.pyplot as plt
 
 mnist = fetch_openml('mnist_784', as_frame=False)
 X, y = cast(np.ndarray, mnist.data), cast(np.ndarray, mnist.target)
+
+data_scaler = StandardScaler()
+X = data_scaler.fit_transform(X.astype('float64'))
 
 X_train, X_test, y_train, y_test = cast(
     list[np.ndarray],
@@ -71,7 +76,12 @@ svm.fit(X_train[:2000], y_train[:2000])
 svm_prediction = svm.predict([X_train[2000]])
 svm_prediction_scores = svm.decision_function([X_train[2000]])
 
-y_train_pred = cross_val_predict(sgd, X_train[:2000], y_train[:2000], cv=2)
+# Plot errors normalized by row. It displays the perentage
+# of the totals errors the model made by misclassifying each image.
+# E.g. 36% of the errors the model made on images of 7s were
+# misclassifications as 9s.
+y_train_pred = cross_val_predict(
+    sgd, X_train[:2000], y_train[:2000], cv=2)
 sample_weight = (y_train_pred != y_train[:2000])
 ConfusionMatrixDisplay.from_predictions(
     y_train[:2000],
@@ -79,4 +89,15 @@ ConfusionMatrixDisplay.from_predictions(
     sample_weight=sample_weight,
     normalize='true',
     values_format='.0%')
-plt.savefig('sgd_confusion_matrix')
+plt.savefig('./charts/sgd_confusion_matrix')
+
+# Creates a multilabel array containing two target labels
+# for each digit image
+y_large_values = (y_train >= '7')
+y_odd_values = (y_train.astype('int8') % 2 == 1)
+y_multilabel = np.c_[y_large_values, y_odd_values]
+
+knn = KNeighborsClassifier()
+knn.fit(X_train, y_multilabel)
+knn_prediction = knn.predict([X_train[10]])
+print('knn_prediction', knn_prediction, y_train[10])
