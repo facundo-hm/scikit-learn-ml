@@ -9,6 +9,7 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.svm import SVC
 from sklearn.preprocessing import StandardScaler
 from sklearn.neighbors import KNeighborsClassifier
+from sklearn.multioutput import ClassifierChain
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -64,6 +65,7 @@ recalls_forest,
 thresholds_forest) = precision_recall_curve(
     y_train_binary, y_binary_scores_forest)
 
+# Mesure model scores
 y_positive_pred_forest = y_binary_proba_forest[:, 1] >= 0.5
 y_f1_score_forest = f1_score(y_train_binary, y_positive_pred_forest)
 y_roc_score_forest = roc_auc_score(
@@ -101,3 +103,10 @@ knn = KNeighborsClassifier()
 knn.fit(X_train, y_multilabel)
 knn_prediction = knn.predict([X_train[10]])
 print('knn_prediction', knn_prediction, y_train[10])
+
+# Use single label classifier model to perform
+# multilable classification
+chain = ClassifierChain(SVC(), cv=2, random_state=42)
+chain.fit(X_train[:2000], y_multilabel[:2000])
+chain_prediction = chain.predict([X_train[2000]])
+print('chain_prediction', chain_prediction, y_train[2000])
