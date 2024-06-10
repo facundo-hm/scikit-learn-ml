@@ -12,16 +12,21 @@ from sklearn.neighbors import KNeighborsClassifier
 from sklearn.multioutput import ClassifierChain
 import numpy as np
 import matplotlib.pyplot as plt
+from utils import plot_mnist_digit
 
 mnist = fetch_openml('mnist_784', as_frame=False)
 X, y = cast(np.ndarray, mnist.data), cast(np.ndarray, mnist.target)
 
+X_train_normal, X_test_normal, y_train_normal, y_test_normal = cast(
+    list[np.ndarray],
+    train_test_split(X, y, test_size=0.2, random_state=42))
+
 data_scaler = StandardScaler()
-X = data_scaler.fit_transform(X.astype('float64'))
+X_scaled = data_scaler.fit_transform(X.astype('float64'))
 
 X_train, X_test, y_train, y_test = cast(
     list[np.ndarray],
-    train_test_split(X, y, test_size=0.2, random_state=42))
+    train_test_split(X_scaled, y, test_size=0.2, random_state=42))
 
 y_train_binary: np.ndarray = (y_train == '5')
 y_test_binary: np.ndarray = (y_test == '5')
@@ -110,3 +115,24 @@ chain = ClassifierChain(SVC(), cv=2, random_state=42)
 chain.fit(X_train[:2000], y_multilabel[:2000])
 chain_prediction = chain.predict([X_train[2000]])
 print('chain_prediction', chain_prediction, y_train[2000])
+
+# Add noise to digits pixel intensities
+np.random.seed(42)
+train_noise = np.random.randint(0, 100, (len(X_train_normal), 784))
+X_train_noise = X_train_normal + train_noise
+test_noise = np.random.randint(0, 100, (len(X_test_normal), 784))
+X_test_noise = X_test_normal + test_noise
+y_train_noise = X_train_normal
+y_test_noise = X_test_normal
+
+# Multioutput classification, each label can be multiclass.
+# The classifier’s output is multilabel (one label per pixel)
+# and each label can have multiple values (pixel intensity
+# ranges from 0 to 255).
+knn_clf = KNeighborsClassifier()
+knn_clf.fit(X_train_noise, y_train_noise)
+clean_digit = knn_clf.predict([X_test_noise[0]])
+plot_mnist_digit(clean_digit)
+plt.savefig('./charts/digit_prediction')
+plot_mnist_digit(y_test_noise[0])
+plt.savefig('./charts/digit_test')
