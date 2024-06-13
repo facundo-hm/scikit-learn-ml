@@ -10,6 +10,7 @@ from data_processing import (
 
 lin_reg = make_pipeline(columns_transformer, LinearRegression())
 lin_reg.fit(X_train, y_train)
+print('Bias term: ', lin_reg.intercept_, ', Weights: ', lin_reg.coef_)
 
 lin_reg_predictions = lin_reg.predict(X_train)
 lin_reg_rmse = root_mean_squared_error(y_train, lin_reg_predictions)
