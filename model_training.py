@@ -1,6 +1,9 @@
 from sklearn.preprocessing import add_dummy_feature, PolynomialFeatures
 from sklearn.linear_model import SGDRegressor, LinearRegression
+from sklearn.model_selection import learning_curve
+from sklearn.pipeline import make_pipeline
 import numpy as np
+import matplotlib.pyplot as plt
 
 # Normal equation
 # θ^ = (X⊺ X)-1 X⊺ y
@@ -85,3 +88,24 @@ X_poly = poly_features.fit_transform(X)
 lin_reg = LinearRegression()
 lin_reg.fit(X_poly, y)
 print('Bias term: ', lin_reg.intercept_, ', Weights: ', lin_reg.coef_)
+
+# Learning Curves
+poly_reg = make_pipeline(
+    PolynomialFeatures(degree=10, include_bias=False),
+    LinearRegression())
+# Train and evaluates the model using cross-validation to get
+# an estimate of the model’s generalization performance.
+train_sizes, train_scores, valid_scores = learning_curve(
+    poly_reg,
+    X_init,
+    y,
+    train_sizes=np.linspace(0.01, 1.0, 40),
+    cv=5,
+    scoring='neg_root_mean_squared_error')
+
+train_errors = -train_scores.mean(axis=1)
+valid_errors = -valid_scores.mean(axis=1)
+
+plt.plot(train_sizes, train_errors, 'r-+', linewidth=2, label='train')
+plt.plot(train_sizes, valid_errors, 'b-', linewidth=3, label='valid')
+plt.savefig('./charts/learning_curve')
