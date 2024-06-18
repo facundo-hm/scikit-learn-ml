@@ -1,5 +1,5 @@
 from sklearn.preprocessing import add_dummy_feature, PolynomialFeatures
-from sklearn.linear_model import SGDRegressor, LinearRegression
+from sklearn.linear_model import SGDRegressor, LinearRegression, Ridge, Lasso
 from sklearn.model_selection import learning_curve
 from sklearn.pipeline import make_pipeline
 import numpy as np
@@ -13,11 +13,11 @@ np.random.seed(42)
 m = 100
 X_init = 2 * np.random.rand(m, 1)
 # y = 4 + 3x₁ + Gaussian noise
-y = 4 + 3 * X_init + np.random.randn(m, 1)
+y_init = 4 + 3 * X_init + np.random.randn(m, 1)
 # Add x0 = 1 to each instance
 X = add_dummy_feature(X_init)
 # Compute the inverse of a matrix and perform matrix multiplication
-theta_hat = np.linalg.inv(X.T @ X) @ X.T @ y
+theta_hat = np.linalg.inv(X.T @ X) @ X.T @ y_init
 print('theta_hat', theta_hat)
 # Predict using θ^
 X_test = np.array([[0], [2]])
@@ -29,7 +29,7 @@ print('y_predict', y_predict)
 # a standard matrix factorization technique called singular
 # value decomposition (SVD). Which is more efficient than
 # computing the Normal equation.
-theta_hat_pinv = np.linalg.pinv(X) @ y
+theta_hat_pinv = np.linalg.pinv(X) @ y_init
 print('pseudoinverse', theta_hat_pinv)
 
 # Batch Gradient Descent
@@ -41,7 +41,7 @@ theta = np.random.randn(2, 1)
 
 for _ in range(n_epochs):
     # Compute the gradient vector of the MSE cost function
-    gradients = 2 / m * X.T @ (X @ theta - y)
+    gradients = 2 / m * X.T @ (X @ theta - y_init)
     theta = theta - eta * gradients
 
 # Stochastic Gradient Descent
@@ -58,7 +58,7 @@ for epoch in range(n_epochs):
     for iteration in range(m):
         random_index = np.random.randint(m)
         xi = X[random_index : random_index + 1]
-        yi = y[random_index : random_index + 1]
+        yi = y_init[random_index : random_index + 1]
         gradients = 2 * xi.T @ (xi @ theta - yi)
         eta = learning_schedule(epoch * m + iteration)
         theta = theta - eta * gradients
@@ -73,7 +73,7 @@ sgd = SGDRegressor(
     eta0=0.01,
     n_iter_no_change=100,
     random_state=42)
-sgd.fit(X_init, y.ravel())
+sgd.fit(X_init, y_init.ravel())
 print('Bias term: ', sgd.intercept_, ', Weights: ', sgd.coef_)
 
 # Polynomial Regression
@@ -96,12 +96,8 @@ poly_reg = make_pipeline(
 # Train and evaluates the model using cross-validation to get
 # an estimate of the model’s generalization performance.
 train_sizes, train_scores, valid_scores = learning_curve(
-    poly_reg,
-    X_init,
-    y,
-    train_sizes=np.linspace(0.01, 1.0, 40),
-    cv=5,
-    scoring='neg_root_mean_squared_error')
+    poly_reg, X_init, y, train_sizes=np.linspace(0.01, 1.0, 40),
+    cv=5, scoring='neg_root_mean_squared_error')
 
 train_errors = -train_scores.mean(axis=1)
 valid_errors = -valid_scores.mean(axis=1)
@@ -109,3 +105,29 @@ valid_errors = -valid_scores.mean(axis=1)
 plt.plot(train_sizes, train_errors, 'r-+', linewidth=2, label='train')
 plt.plot(train_sizes, valid_errors, 'b-', linewidth=3, label='valid')
 plt.savefig('./charts/learning_curve')
+
+# Ridge Regression
+# Regularized version of linear regression, a regularization term
+# is added to the MSE.
+# Ridge regression using a closed-form solution.
+ridge_cf = Ridge(alpha=0.1, solver='cholesky')
+ridge_cf.fit(X_init, y_init)
+ridge_cf_pred = ridge_cf.predict([[1.5]])
+print('ridge_cf_pred', ridge_cf_pred)
+
+# Ridge using stochastic gradient descent
+ridge_sgd = SGDRegressor(
+    penalty='l2', alpha=0.1/m, tol=None,
+    max_iter=1000, eta0=0.01, random_state=42)
+ridge_sgd.fit(X_init, y_init.ravel())
+ridge_sgd_pred = ridge_sgd.predict([[1.5]])
+print('ridge_sgd_pred', ridge_sgd_pred)
+
+# Lasso Regression
+# Regularized version of linear regression, uses the ℓ1 norm of
+# the weight vector to add a regularization term to the cost function.
+# Similar to SGDRegressor(penalty='l1', alpha=0.1)
+lasso = Lasso(alpha=0.1)
+lasso.fit(X_init, y_init)
+lasso_pred = lasso.predict([[1.5]])
+print('lasso_pred', lasso_pred)
