@@ -1,7 +1,12 @@
-from sklearn.preprocessing import add_dummy_feature, PolynomialFeatures
-from sklearn.linear_model import SGDRegressor, LinearRegression, Ridge, Lasso
-from sklearn.model_selection import learning_curve
+from typing import cast
+from copy import deepcopy
+from sklearn.preprocessing import (
+    add_dummy_feature, PolynomialFeatures, StandardScaler)
+from sklearn.linear_model import (
+    SGDRegressor, LinearRegression, Ridge, Lasso, ElasticNet)
+from sklearn.model_selection import learning_curve, train_test_split
 from sklearn.pipeline import make_pipeline
+from sklearn.metrics import mean_squared_error
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -77,16 +82,16 @@ sgd.fit(X_init, y_init.ravel())
 print('Bias term: ', sgd.intercept_, ', Weights: ', sgd.coef_)
 
 # Polynomial Regression
-X = 6 * np.random.rand(m, 1) - 3
+X_quad = 6 * np.random.rand(m, 1) - 3
 # Simple quadratic equation, y = ax² + bx + c plus some noise
-y = 0.5 * X ** 2 + X + 2 + np.random.randn(m, 1)
+y_quad = 0.5 * X_quad ** 2 + X_quad + 2 + np.random.randn(m, 1)
 
 poly_features = PolynomialFeatures(degree=2, include_bias=False)
 # Add the square of each feature as a new feature
 X_poly = poly_features.fit_transform(X)
 
 lin_reg = LinearRegression()
-lin_reg.fit(X_poly, y)
+lin_reg.fit(X_poly, y_quad)
 print('Bias term: ', lin_reg.intercept_, ', Weights: ', lin_reg.coef_)
 
 # Learning Curves
@@ -96,7 +101,7 @@ poly_reg = make_pipeline(
 # Train and evaluates the model using cross-validation to get
 # an estimate of the model’s generalization performance.
 train_sizes, train_scores, valid_scores = learning_curve(
-    poly_reg, X_init, y, train_sizes=np.linspace(0.01, 1.0, 40),
+    poly_reg, X_quad, y_quad, train_sizes=np.linspace(0.01, 1.0, 40),
     cv=5, scoring='neg_root_mean_squared_error')
 
 train_errors = -train_scores.mean(axis=1)
@@ -131,3 +136,42 @@ lasso = Lasso(alpha=0.1)
 lasso.fit(X_init, y_init)
 lasso_pred = lasso.predict([[1.5]])
 print('lasso_pred', lasso_pred)
+
+# Elastic Net Regression
+# The regularization term is a weighted sum of both ridge and lasso’s
+# regularization terms, and you can control the mix ratio r (l1_ratio)
+elastic_net = ElasticNet(alpha=0.1, l1_ratio=0.5)
+elastic_net.fit(X_init, y_init)
+elastic_net_pred = elastic_net.predict([[1.5]])
+print('elastic_net_pred', elastic_net_pred)
+
+# Early Stopping
+# Stop training as soon as the validation error reaches a minimum
+X_train, y_train, X_valid, y_valid = cast(
+    list[np.ndarray],
+    train_test_split(X_quad, y_quad, test_size=0.2, random_state=42))
+
+y_train = y_train.ravel()
+y_valid = y_valid.ravel()
+
+preprocessing = make_pipeline(
+    PolynomialFeatures(degree=90, include_bias=False),
+    StandardScaler())
+
+X_train_prep = preprocessing.fit_transform(X_train)
+X_valid_prep = preprocessing.transform(X_valid)
+
+sgd_reg = SGDRegressor(penalty=None, eta0=0.002, random_state=42)
+n_epochs = 500
+best_valid_rmse = float('inf')
+
+for epoch in range(n_epochs):
+    sgd_reg.partial_fit(X_train_prep, y_train)
+    y_valid_predict = sgd_reg.predict(X_valid_prep)
+    val_error = mean_squared_error(y_valid, y_valid_predict, squared=False)
+    if val_error < best_valid_rmse:
+        best_valid_rmse = val_error
+        best_model = deepcopy(sgd_reg)
+
+print('best_valid_rmse', best_valid_rmse)
+print('best_model', best_model)
