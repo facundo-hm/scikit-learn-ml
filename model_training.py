@@ -6,7 +6,7 @@ from sklearn.linear_model import (
     SGDRegressor, LinearRegression, Ridge, Lasso, ElasticNet)
 from sklearn.model_selection import learning_curve, train_test_split
 from sklearn.pipeline import make_pipeline
-from sklearn.metrics import mean_squared_error
+from sklearn.metrics import mean_squared_error, root_mean_squared_error
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -147,9 +147,9 @@ print('elastic_net_pred', elastic_net_pred)
 
 # Early Stopping
 # Stop training as soon as the validation error reaches a minimum
-X_train, y_train, X_valid, y_valid = cast(
+X_train, X_valid, y_train, y_valid = cast(
     list[np.ndarray],
-    train_test_split(X_quad, y_quad, test_size=0.2, random_state=42))
+    train_test_split(X_quad, y_quad, test_size=0.5, random_state=42))
 
 y_train = y_train.ravel()
 y_valid = y_valid.ravel()
@@ -168,7 +168,7 @@ best_valid_rmse = float('inf')
 for epoch in range(n_epochs):
     sgd_reg.partial_fit(X_train_prep, y_train)
     y_valid_predict = sgd_reg.predict(X_valid_prep)
-    val_error = mean_squared_error(y_valid, y_valid_predict, squared=False)
+    val_error = root_mean_squared_error(y_valid, y_valid_predict)
     if val_error < best_valid_rmse:
         best_valid_rmse = val_error
         best_model = deepcopy(sgd_reg)
