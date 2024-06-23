@@ -3,10 +3,11 @@ from copy import deepcopy
 from sklearn.preprocessing import (
     add_dummy_feature, PolynomialFeatures, StandardScaler)
 from sklearn.linear_model import (
-    SGDRegressor, LinearRegression, Ridge, Lasso, ElasticNet)
+    SGDRegressor, LinearRegression, Ridge, Lasso, ElasticNet, LogisticRegression)
 from sklearn.model_selection import learning_curve, train_test_split
 from sklearn.pipeline import make_pipeline
-from sklearn.metrics import mean_squared_error, root_mean_squared_error
+from sklearn.metrics import root_mean_squared_error
+from sklearn.datasets import load_iris
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -146,7 +147,9 @@ elastic_net_pred = elastic_net.predict([[1.5]])
 print('elastic_net_pred', elastic_net_pred)
 
 # Early Stopping
-# Stop training as soon as the validation error reaches a minimum
+# Stop training as soon as the validation error reaches a minimum.
+# This implementation does not actually stop training, but allows to
+# revert to the best model after training.
 X_train, X_valid, y_train, y_valid = cast(
     list[np.ndarray],
     train_test_split(X_quad, y_quad, test_size=0.5, random_state=42))
@@ -158,20 +161,42 @@ preprocessing = make_pipeline(
     PolynomialFeatures(degree=90, include_bias=False),
     StandardScaler())
 
-X_train_prep = preprocessing.fit_transform(X_train)
-X_valid_prep = preprocessing.transform(X_valid)
+X_train = preprocessing.fit_transform(X_train)
+X_valid = preprocessing.transform(X_valid)
 
 sgd_reg = SGDRegressor(penalty=None, eta0=0.002, random_state=42)
 n_epochs = 500
 best_valid_rmse = float('inf')
 
 for epoch in range(n_epochs):
-    sgd_reg.partial_fit(X_train_prep, y_train)
-    y_valid_predict = sgd_reg.predict(X_valid_prep)
+    sgd_reg.partial_fit(X_train, y_train)
+    y_valid_predict = sgd_reg.predict(X_valid)
     val_error = root_mean_squared_error(y_valid, y_valid_predict)
+
     if val_error < best_valid_rmse:
         best_valid_rmse = val_error
+        # Copie both the hyperparameters and the learned parameters
         best_model = deepcopy(sgd_reg)
 
 print('best_valid_rmse', best_valid_rmse)
-print('best_model', best_model)
+
+# Logistic regression
+# Estimate the probability that an instance belongs to a particular class
+iris = load_iris(as_frame=True)
+
+print('iris.target', iris.target)
+
+X = iris.data[['petal width (cm)']].values
+y = iris.target_names[iris.target] == 'virginica'
+
+X_train, X_test, y_train, y_test = train_test_split(X, y, random_state=42)
+
+log_reg = LogisticRegression(random_state=42)
+log_reg.fit(X_train, y_train)
+
+# Estimate probabilities for flowers with petal widths varying
+# from 0 cm to 3 cm.
+# Reshape to get a one column vector.
+X_val = np.linspace(0, 3, 1000).reshape(-1, 1)
+y_val = log_reg.predict_proba(X_val)
+decision_boundary = X_val[y_val[:, 1] >= 0.5][0, 0]
