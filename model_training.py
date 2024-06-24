@@ -9,6 +9,7 @@ from sklearn.pipeline import make_pipeline
 from sklearn.metrics import root_mean_squared_error
 from sklearn.datasets import load_iris
 import numpy as np
+from pandas import DataFrame
 import matplotlib.pyplot as plt
 
 # Normal equation
@@ -183,13 +184,14 @@ print('best_valid_rmse', best_valid_rmse)
 # Logistic regression
 # Estimate the probability that an instance belongs to a particular class
 iris = load_iris(as_frame=True)
+iris_data = cast(DataFrame, iris.data)
+iris_target = cast(DataFrame, iris.target)
 
-print('iris.target', iris.target)
+X = iris_data[['petal width (cm)']].values
+y = iris.target_names[iris_target] == 'virginica'
 
-X = iris.data[['petal width (cm)']].values
-y = iris.target_names[iris.target] == 'virginica'
-
-X_train, X_test, y_train, y_test = train_test_split(X, y, random_state=42)
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, random_state=42)
 
 log_reg = LogisticRegression(random_state=42)
 log_reg.fit(X_train, y_train)
@@ -197,6 +199,25 @@ log_reg.fit(X_train, y_train)
 # Estimate probabilities for flowers with petal widths varying
 # from 0 cm to 3 cm.
 # Reshape to get a one column vector.
-X_val = np.linspace(0, 3, 1000).reshape(-1, 1)
-y_val = log_reg.predict_proba(X_val)
-decision_boundary = X_val[y_val[:, 1] >= 0.5][0, 0]
+X_petal_widths = np.linspace(0, 3, 1000).reshape(-1, 1)
+y_proba = log_reg.predict_proba(X_petal_widths)
+
+# Use petal widths as boundary values to obtain the decision boundary
+decision_boundary = X_petal_widths[y_proba[:, 1] >= 0.5][0, 0]
+print('decision_boundary', decision_boundary)
+
+# Softmax regression
+# Classify the iris plants into all three classes
+X = iris_data[['petal length (cm)', 'petal width (cm)']].values
+y = iris_target
+
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, random_state=42)
+
+softmax_reg = LogisticRegression(C=30, random_state=42)
+softmax_reg.fit(X_train, y_train)
+
+softmax_predict = softmax_reg.predict([[5, 2]])
+softmax_proba = softmax_reg.predict_proba([[5, 2]]).round(2)
+print('softmax_predict', softmax_predict)
+print('softmax_proba', softmax_proba)
