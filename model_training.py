@@ -12,7 +12,7 @@ import numpy as np
 from pandas import DataFrame
 import matplotlib.pyplot as plt
 
-# Normal equation
+### NORMAL EQUATION ###
 # θ^ = (X⊺ X)-1 X⊺ y
 # Find the value of θ that minimizes the MSE (mean square error)
 np.random.seed(42)
@@ -39,7 +39,7 @@ print('y_predict', y_predict)
 theta_hat_pinv = np.linalg.pinv(X) @ y_init
 print('pseudoinverse', theta_hat_pinv)
 
-# Batch Gradient Descent
+### BATCH GRADIENT DESCENT ###
 # learning rate
 eta = 0.1
 n_epochs = 1000
@@ -51,7 +51,7 @@ for _ in range(n_epochs):
     gradients = 2 / m * X.T @ (X @ theta - y_init)
     theta = theta - eta * gradients
 
-# Stochastic Gradient Descent
+### STOCHASTIC GRADIENT DESCENT ###
 n_epochs = 50
 # Learning schedule hyperparameters
 t0, t1 = 5, 50
@@ -83,7 +83,7 @@ sgd = SGDRegressor(
 sgd.fit(X_init, y_init.ravel())
 print('Bias term: ', sgd.intercept_, ', Weights: ', sgd.coef_)
 
-# Polynomial Regression
+### POLYNOMIAL REGRESSION ###
 X_quad = 6 * np.random.rand(m, 1) - 3
 # Simple quadratic equation, y = ax² + bx + c plus some noise
 y_quad = 0.5 * X_quad ** 2 + X_quad + 2 + np.random.randn(m, 1)
@@ -96,7 +96,7 @@ lin_reg = LinearRegression()
 lin_reg.fit(X_poly, y_quad)
 print('Bias term: ', lin_reg.intercept_, ', Weights: ', lin_reg.coef_)
 
-# Learning Curves
+### LEARNING CURVES ###
 poly_reg = make_pipeline(
     PolynomialFeatures(degree=10, include_bias=False),
     LinearRegression())
@@ -113,7 +113,7 @@ plt.plot(train_sizes, train_errors, 'r-+', linewidth=2, label='train')
 plt.plot(train_sizes, valid_errors, 'b-', linewidth=3, label='valid')
 plt.savefig('./charts/learning_curve')
 
-# Ridge Regression
+### RIDGE REGRESSION ###
 # Regularized version of linear regression, a regularization term
 # is added to the MSE.
 # Ridge regression using a closed-form solution.
@@ -130,7 +130,7 @@ ridge_sgd.fit(X_init, y_init.ravel())
 ridge_sgd_pred = ridge_sgd.predict([[1.5]])
 print('ridge_sgd_pred', ridge_sgd_pred)
 
-# Lasso Regression
+### LASSO REGRESSION ###
 # Regularized version of linear regression, uses the ℓ1 norm of
 # the weight vector to add a regularization term to the cost function.
 # Similar to SGDRegressor(penalty='l1', alpha=0.1)
@@ -139,7 +139,7 @@ lasso.fit(X_init, y_init)
 lasso_pred = lasso.predict([[1.5]])
 print('lasso_pred', lasso_pred)
 
-# Elastic Net Regression
+### ELASTIC NET REGRESSION ###
 # The regularization term is a weighted sum of both ridge and lasso’s
 # regularization terms, and you can control the mix ratio r (l1_ratio)
 elastic_net = ElasticNet(alpha=0.1, l1_ratio=0.5)
@@ -147,7 +147,7 @@ elastic_net.fit(X_init, y_init)
 elastic_net_pred = elastic_net.predict([[1.5]])
 print('elastic_net_pred', elastic_net_pred)
 
-# Early Stopping
+### EARLY STOPPING ###
 # Stop training as soon as the validation error reaches a minimum.
 # This implementation does not actually stop training, but allows to
 # revert to the best model after training.
@@ -181,7 +181,7 @@ for epoch in range(n_epochs):
 
 print('best_valid_rmse', best_valid_rmse)
 
-# Logistic regression
+### LOGISTIC REGRESSION ###
 # Estimate the probability that an instance belongs to a particular class
 iris = load_iris(as_frame=True)
 iris_data = cast(DataFrame, iris.data)
@@ -206,7 +206,7 @@ y_proba = log_reg.predict_proba(X_petal_widths)
 decision_boundary = X_petal_widths[y_proba[:, 1] >= 0.5][0, 0]
 print('decision_boundary', decision_boundary)
 
-# Softmax regression
+### SOFTMAX REGRESSION ###
 # Classify the iris plants into all three classes
 X = iris_data[['petal length (cm)', 'petal width (cm)']].values
 y = iris_target
