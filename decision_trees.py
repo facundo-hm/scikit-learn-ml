@@ -3,6 +3,9 @@ from sklearn.datasets import load_iris, make_moons
 from sklearn.tree import (
     DecisionTreeClassifier, export_graphviz, DecisionTreeRegressor)
 from sklearn.model_selection import train_test_split
+from sklearn.decomposition import PCA
+from sklearn.pipeline import make_pipeline
+from sklearn.preprocessing import StandardScaler
 from pandas import DataFrame
 import numpy as np
 
@@ -33,6 +36,18 @@ dtc_iris_proba = dtc_iris.predict_proba([[5, 1.5]]).round(3)
 dtc_iris_predict = dtc_iris.predict([[5, 1.5]])
 print('dtc_iris_proba', dtc_iris_proba)
 print('dtc_iris_predict', dtc_iris_predict)
+
+# Scale and rotate the data using PCA
+pca_pipeline = make_pipeline(StandardScaler(), PCA())
+X = pca_pipeline.fit_transform(X)
+
+dtc_iris_pca = DecisionTreeClassifier(max_depth=2, random_state=42)
+dtc_iris_pca.fit(X, y)
+
+dtc_iris_pca_proba = dtc_iris_pca.predict_proba([[5, 1.5]]).round(3)
+dtc_iris_pca_predict = dtc_iris_pca.predict([[5, 1.5]])
+print('dtc_iris_pca_proba', dtc_iris_pca_proba)
+print('dtc_iris_pca_predict', dtc_iris_pca_predict)
 
 X, y = make_moons(n_samples=1000, noise=0.2, random_state=42)
 
