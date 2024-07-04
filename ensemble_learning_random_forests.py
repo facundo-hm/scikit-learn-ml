@@ -1,7 +1,7 @@
 from sklearn.datasets import make_moons
 from sklearn.ensemble import (
     RandomForestClassifier, VotingClassifier, BaggingClassifier,
-    AdaBoostClassifier, GradientBoostingRegressor)
+    AdaBoostClassifier, GradientBoostingRegressor, StackingClassifier)
 from sklearn.linear_model import LogisticRegression
 from sklearn.tree import DecisionTreeClassifier, DecisionTreeRegressor
 from sklearn.model_selection import train_test_split
@@ -99,7 +99,24 @@ print('dtr_pred', dtr_pred)
 # Fit the new predictor to the residual errors made by
 # the previous predictor.
 gbr = GradientBoostingRegressor(
-    max_depth=2, n_estimators=3, learning_rate=1.0, random_state=42)
+    max_depth=2, n_estimators=500, learning_rate=0.05,
+    random_state=42, n_iter_no_change=10)
 gbr.fit(X_quad, y_quad)
 gbr_pred = gbr.predict(X_quad_test)
 print('gbr_pred', gbr_pred)
+# Optimal number of estimators.
+print('gbr.n_estimators_', gbr.n_estimators_)
+
+### STACKING ###
+sc = StackingClassifier(
+    estimators=[
+        ('lr', LogisticRegression(random_state=42)),
+        ('rf', RandomForestClassifier(random_state=42)),
+        ('svc', SVC(probability=True, random_state=42))
+    ],
+    final_estimator=RandomForestClassifier(random_state=43),
+    cv=5
+)
+sc.fit(X_train, y_train)
+sc_score = sc.score(X_test, y_test)
+print('sc_score', sc_score)
