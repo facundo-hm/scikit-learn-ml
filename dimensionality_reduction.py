@@ -1,8 +1,10 @@
 from typing import cast
 from sklearn.datasets import fetch_openml
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import train_test_split, RandomizedSearchCV
 from scipy.spatial.transform import Rotation
-from sklearn.decomposition import PCA
+from sklearn.decomposition import PCA, IncrementalPCA
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.pipeline import make_pipeline
 import numpy as np
 
 np.random.seed(42)
@@ -47,8 +49,32 @@ X_2d = pca.fit_transform(X)
 # along each principal component
 pca.explained_variance_ratio_
 
-# Float 0.0 to 1.0 is the ratio of variance to preserve, and the number
-# of components is defined during training
+# Float 0.0 to 1.0 is the ratio of variance to preserve,
+# and the number of components is defined during training
 pca = PCA(n_components=0.95)
 X_reduced = pca.fit_transform(X_train)
 pca.n_components_
+
+clf = make_pipeline(
+    PCA(random_state=42),
+    RandomForestClassifier(random_state=42))
+# Find a good combination of hyperparameters for both PCA
+# and the random forest classifier
+param_distrib = {
+    'pca__n_components': np.arange(10, 60),
+    'randomforestclassifier__n_estimators': np.arange(50, 500)
+}
+rscv = RandomizedSearchCV(
+    clf, param_distrib, n_iter=10, cv=3, random_state=42)
+rscv.fit(X_train[:100], y_train[:100])
+rscv.best_params_
+
+# Split the training set into mini-batches and feed these in
+# one mini-batch at a time
+n_batches = 100
+ipca = IncrementalPCA(n_components=154)
+
+for X_batch in np.array_split(X_train, n_batches):
+    ipca.partial_fit(X_batch)
+
+X_reduced = ipca.transform(X_train)
