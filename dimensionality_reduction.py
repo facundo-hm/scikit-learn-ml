@@ -5,12 +5,15 @@ from scipy.spatial.transform import Rotation
 from sklearn.decomposition import PCA, IncrementalPCA
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.pipeline import make_pipeline
+from sklearn.random_projection import (
+    johnson_lindenstrauss_min_dim, GaussianRandomProjection)
 import numpy as np
 
 np.random.seed(42)
 
 mnist = fetch_openml('mnist_784', as_frame=False)
-X_mnist, y_mnist = cast(np.ndarray, mnist.data), cast(np.ndarray, mnist.target)
+X_mnist, y_mnist = (
+    cast(np.ndarray, mnist.data), cast(np.ndarray, mnist.target))
 
 X_train, X_test, y_train, y_test = cast(
     list[np.ndarray],
@@ -78,3 +81,20 @@ for X_batch in np.array_split(X_train, n_batches):
     ipca.partial_fit(X_batch)
 
 X_reduced = ipca.transform(X_train)
+
+### RANDOM PROJECTION ###
+m, eps = 5000, 0.1
+n = 20000
+
+# Determine the minimum number of dimensions to preserve
+# in order to ensure that distances won’t change by more 
+# than a given tolerance
+d = johnson_lindenstrauss_min_dim(m, eps=eps)
+P = np.random.randn(d, n) / np.sqrt(d)
+
+X = np.random.randn(m, n)
+X_reduced = X @ P.T
+
+# Previous algorithm implementation
+grp = GaussianRandomProjection(eps=eps, random_state=42)
+X_reduced = grp.fit_transform(X)
