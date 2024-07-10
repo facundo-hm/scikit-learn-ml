@@ -1,5 +1,5 @@
 from typing import cast
-from sklearn.datasets import fetch_openml
+from sklearn.datasets import fetch_openml, make_swiss_roll
 from sklearn.model_selection import train_test_split, RandomizedSearchCV
 from scipy.spatial.transform import Rotation
 from sklearn.decomposition import PCA, IncrementalPCA
@@ -7,6 +7,7 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.pipeline import make_pipeline
 from sklearn.random_projection import (
     johnson_lindenstrauss_min_dim, GaussianRandomProjection)
+from sklearn.manifold import LocallyLinearEmbedding
 import numpy as np
 
 np.random.seed(42)
@@ -86,9 +87,8 @@ X_reduced = ipca.transform(X_train)
 m, eps = 5000, 0.1
 n = 20000
 
-# Determine the minimum number of dimensions to preserve
-# in order to ensure that distances won’t change by more 
-# than a given tolerance
+# Determine the minimum number of dimensions to preserve in order to
+# ensure that distances won’t change by more than a given tolerance
 d = johnson_lindenstrauss_min_dim(m, eps=eps)
 P = np.random.randn(d, n) / np.sqrt(d)
 
@@ -98,3 +98,13 @@ X_reduced = X @ P.T
 # Previous algorithm implementation
 grp = GaussianRandomProjection(eps=eps, random_state=42)
 X_reduced = grp.fit_transform(X)
+
+### LLE ###
+X_swiss, t = make_swiss_roll(
+    n_samples=1000, noise=0.2, random_state=42)
+# Measure how each training instance linearly relates to its nearest
+# neighbors, then look for a low-dimensional representation of the
+# training set where these local relationships are best preserved.
+lle = LocallyLinearEmbedding(
+    n_components=2, n_neighbors=10, random_state=42)
+X_unrolled = lle.fit_transform(X_swiss)
