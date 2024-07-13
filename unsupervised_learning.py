@@ -4,6 +4,7 @@ from sklearn.cluster import KMeans, MiniBatchKMeans
 from sklearn.datasets import make_blobs, load_digits
 from sklearn.linear_model import LogisticRegression
 import numpy as np
+from utils import save_representative_imgs
 
 ### K-MEANS ###
 blob_centers = np.array([
@@ -33,13 +34,38 @@ X_train, X_test, y_train, y_test = cast(
     list[np.ndarray],
     train_test_split(X, y, test_size=0.5, random_state=42))
 
-n_labeled = 50
-log_reg = LogisticRegression(max_iter=10_000)
-log_reg.fit(X_train[:n_labeled], y_train[:n_labeled])
-log_reg.score(X_test, y_test)
+labeled_k = 50
+max_iter = 10000
+lr = LogisticRegression(max_iter=max_iter)
+lr.fit(X_train[:labeled_k], y_train[:labeled_k])
+print(lr.score(X_test, y_test))
 
-k = 50
-km = KMeans(n_clusters=k, random_state=42)
+km = KMeans(n_clusters=labeled_k, random_state=42)
+# Distance of the images in each cluster
 X_dist = km.fit_transform(X_train)
+# Idxs of the image with min distance in each cluste
 representative_idx = np.argmin(X_dist, axis=0)
+# Find the image closest to the centroid
 X_representative = X_train[representative_idx]
+
+save_representative_imgs(X_representative, labeled_k)
+# Label representative images manually
+y_representative = np.array([
+    8, 0, 7, 3, 6, 1, 1, 2, 5, 5,
+    2, 4, 8, 7, 4, 4, 9, 7, 2, 1,
+    6, 9, 6, 0, 5, 9, 6, 5, 3, 7,
+    7, 4, 6, 0, 1, 9, 8, 1, 8, 2,
+    7, 2, 3, 1, 1, 7, 2, 3, 7, 8])
+
+lr = LogisticRegression(max_iter=max_iter)
+lr.fit(X_representative, y_representative)
+print(lr.score(X_test, y_test))
+
+y_train_propagated = np.empty(len(X_train), dtype=np.int64)
+
+for i in range(k):
+    y_train_propagated[km.labels_ == i] = y_representative[i]
+
+lr = LogisticRegression(max_iter=max_iter)
+lr.fit(X_train, y_train_propagated)
+print(lr.score(X_test, y_test))
