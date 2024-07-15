@@ -62,10 +62,32 @@ lr.fit(X_representative, y_representative)
 print(lr.score(X_test, y_test))
 
 y_train_propagated = np.empty(len(X_train), dtype=np.int64)
-
-for i in range(k):
+# Apply label propagation
+for i in range(labeled_k):
     y_train_propagated[km.labels_ == i] = y_representative[i]
 
 lr = LogisticRegression(max_iter=max_iter)
 lr.fit(X_train, y_train_propagated)
 print(lr.score(X_test, y_test))
+
+percentile_closest = 99
+X_cluster_dist = X_dist[np.arange(len(X_train)), km.labels_]
+# print('X_train', X_train[:5])
+# print('km.labels_', km.labels_[:5])
+# print('X_dist', X_dist[:5])
+# print('X_cluster_dist', X_cluster_dist[:5])
+
+for i in range(labeled_k):
+    in_cluster = (km.labels_ == i)
+    cluster_dist = X_cluster_dist[in_cluster]
+    cutoff_distance = np.percentile(cluster_dist, percentile_closest)
+    above_cutoff = (X_cluster_dist > cutoff_distance)
+    X_cluster_dist[in_cluster & above_cutoff] = -1
+    partially_propagated = (X_cluster_dist != -1)
+
+X_train_partially_propagated = X_train[partially_propagated]
+y_train_partially_propagated = y_train_propagated[partially_propagated]
+
+log_reg = LogisticRegression(max_iter=10_000)
+log_reg.fit(X_train_partially_propagated, y_train_partially_propagated)
+print(log_reg.score(X_test, y_test))
