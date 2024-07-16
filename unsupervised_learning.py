@@ -71,20 +71,23 @@ lr.fit(X_train, y_train_propagated)
 print(lr.score(X_test, y_test))
 
 percentile_closest = 99
+# Get the training instances distance to its closest cluster center
+# by using the instance index and its corresponding label 
 X_cluster_dist = X_dist[np.arange(len(X_train)), km.labels_]
-# print('X_train', X_train[:5])
-# print('km.labels_', km.labels_[:5])
-# print('X_dist', X_dist[:5])
-# print('X_cluster_dist', X_cluster_dist[:5])
 
 for i in range(labeled_k):
+    # Get indexes of the instances in each cluster 
     in_cluster = (km.labels_ == i)
+    # Arrange instances distance by cluster
     cluster_dist = X_cluster_dist[in_cluster]
-    cutoff_distance = np.percentile(cluster_dist, percentile_closest)
-    above_cutoff = (X_cluster_dist > cutoff_distance)
-    X_cluster_dist[in_cluster & above_cutoff] = -1
-    partially_propagated = (X_cluster_dist != -1)
 
+    # Get instances that are farthest from their cluster center
+    farthest_distance = np.percentile(cluster_dist, percentile_closest)
+    above_farthest_distance = (X_cluster_dist > farthest_distance)
+
+    X_cluster_dist[in_cluster & above_farthest_distance] = -1
+
+partially_propagated = (X_cluster_dist != -1)
 X_train_partially_propagated = X_train[partially_propagated]
 y_train_partially_propagated = y_train_propagated[partially_propagated]
 
