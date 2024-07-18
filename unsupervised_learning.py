@@ -74,23 +74,24 @@ percentile_closest = 99
 # Get the training instances distance to its closest cluster center
 # by using the instance index and its corresponding label 
 X_cluster_dist = X_dist[np.arange(len(X_train)), km.labels_]
+closest_idxs = []
 
 for i in range(labeled_k):
-    # Get indexes of the instances in each cluster 
+    # Get boolean of the instances in current iterated cluster 
     in_cluster = (km.labels_ == i)
     # Arrange instances distance by cluster
     cluster_dist = X_cluster_dist[in_cluster]
 
-    # Get instances that are farthest from their cluster center
+    # Get farthest distance from cluster center
     farthest_distance = np.percentile(cluster_dist, percentile_closest)
-    above_farthest_distance = (X_cluster_dist > farthest_distance)
+    closest_distance_idxs = np.argwhere(
+        (X_cluster_dist <= farthest_distance) & in_cluster).flatten()
 
-    X_cluster_dist[in_cluster & above_farthest_distance] = -1
+    closest_idxs.extend(closest_distance_idxs) 
 
-partially_propagated = (X_cluster_dist != -1)
-X_train_partially_propagated = X_train[partially_propagated]
-y_train_partially_propagated = y_train_propagated[partially_propagated]
+X_train_partially_propagated = X_train[closest_idxs]
+y_train_partially_propagated = y_train_propagated[closest_idxs]
 
-log_reg = LogisticRegression(max_iter=10_000)
+log_reg = LogisticRegression(max_iter=max_iter)
 log_reg.fit(X_train_partially_propagated, y_train_partially_propagated)
 print(log_reg.score(X_test, y_test))
