@@ -1,8 +1,9 @@
 from typing import cast
 from sklearn.model_selection import train_test_split
-from sklearn.cluster import KMeans, MiniBatchKMeans
-from sklearn.datasets import make_blobs, load_digits
+from sklearn.cluster import KMeans, MiniBatchKMeans, DBSCAN
+from sklearn.datasets import make_blobs, load_digits, make_moons
 from sklearn.linear_model import LogisticRegression
+from sklearn.neighbors import KNeighborsClassifier
 import numpy as np
 from utils import save_representative_imgs
 
@@ -95,3 +96,17 @@ y_train_partially_propagated = y_train_propagated[closest_idxs]
 log_reg = LogisticRegression(max_iter=max_iter)
 log_reg.fit(X_train_partially_propagated, y_train_partially_propagated)
 print(log_reg.score(X_test, y_test))
+
+### DBSCAN ###
+X, y = make_moons(n_samples=1000, noise=0.05)
+
+dbscan = DBSCAN(eps=0.20, min_samples=5)
+dbscan.fit(X)
+
+knc = KNeighborsClassifier(n_neighbors=50)
+# Train classifier on the core instances dbscan.components_
+knc.fit(dbscan.components_, dbscan.labels_[dbscan.core_sample_indices_])
+
+X_test = np.array([[-0.5, 0], [0, 0.5], [1, -0.1], [2, 1]])
+knc.predict(X_test)
+knc.predict_proba(X_test)
