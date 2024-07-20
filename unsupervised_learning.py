@@ -4,6 +4,7 @@ from sklearn.cluster import KMeans, MiniBatchKMeans, DBSCAN
 from sklearn.datasets import make_blobs, load_digits, make_moons
 from sklearn.linear_model import LogisticRegression
 from sklearn.neighbors import KNeighborsClassifier
+from sklearn.mixture import GaussianMixture
 import numpy as np
 from utils import save_representative_imgs
 
@@ -99,14 +100,34 @@ print(log_reg.score(X_test, y_test))
 
 ### DBSCAN ###
 X, y = make_moons(n_samples=1000, noise=0.05)
+X_train, X_test, y_train, y_test = cast(
+    list[np.ndarray],
+    train_test_split(X, y, test_size=0.2, random_state=42))
 
 dbscan = DBSCAN(eps=0.20, min_samples=5)
-dbscan.fit(X)
+dbscan.fit(X_train)
 
 knc = KNeighborsClassifier(n_neighbors=50)
 # Train classifier on the core instances dbscan.components_
 knc.fit(dbscan.components_, dbscan.labels_[dbscan.core_sample_indices_])
 
-X_test = np.array([[-0.5, 0], [0, 0.5], [1, -0.1], [2, 1]])
 knc.predict(X_test)
 knc.predict_proba(X_test)
+
+### GAUSSIAN MIXTURES ###
+gm = GaussianMixture(n_components=3, n_init=10)
+gm.fit(X_train)
+
+gm.weights_
+gm.means_
+gm.covariances_
+
+gm.predict(X_test)
+gm.predict_proba(X_test)
+# Sample new instances ordered by cluster index
+X_new, y_new = gm.sample(6)
+
+# Anomaly Detection
+densities = gm.score_samples(X_train)
+density_threshold = np.percentile(densities, 2)
+anomalies = X_train[densities < density_threshold]
