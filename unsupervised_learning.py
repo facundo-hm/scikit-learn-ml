@@ -131,3 +131,12 @@ X_new, y_new = gm.sample(6)
 densities = gm.score_samples(X_train)
 density_threshold = np.percentile(densities, 2)
 anomalies = X_train[densities < density_threshold]
+
+# Select number of clusters.
+# Compute both the Bayesian information criterion and the Akaike
+# information criterion on modeles with different number of clusters.
+gms = [GaussianMixture(
+    n_components=k, n_init=10, random_state=42).fit(X)
+    for k in range(1, 11)]
+bics = [model.bic(X_train) for model in gms]
+aics = [model.aic(X_train) for model in gms]
