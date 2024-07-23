@@ -4,7 +4,7 @@ from sklearn.cluster import KMeans, MiniBatchKMeans, DBSCAN
 from sklearn.datasets import make_blobs, load_digits, make_moons
 from sklearn.linear_model import LogisticRegression
 from sklearn.neighbors import KNeighborsClassifier
-from sklearn.mixture import GaussianMixture
+from sklearn.mixture import GaussianMixture, BayesianGaussianMixture
 import numpy as np
 from utils import save_representative_imgs
 
@@ -109,12 +109,26 @@ dbscan.fit(X_train)
 
 knc = KNeighborsClassifier(n_neighbors=50)
 # Train classifier on the core instances dbscan.components_
-knc.fit(dbscan.components_, dbscan.labels_[dbscan.core_sample_indices_])
+knc.fit(
+    dbscan.components_, dbscan.labels_[dbscan.core_sample_indices_])
 
 knc.predict(X_test)
 knc.predict_proba(X_test)
 
 ### GAUSSIAN MIXTURES ###
+# Generate dataset with three ellipsoids
+X1, y1 = make_blobs(
+    n_samples=1000, centers=((4, -4), (0, 0)), random_state=42)
+X1 = X1.dot(np.array([[0.374, 0.95], [0.732, 0.598]]))
+X2, y2 = make_blobs(n_samples=250, centers=1, random_state=42)
+X2 = X2 + [6, -8]
+X = np.r_[X1, X2]
+y = np.r_[y1, y2]
+
+X_train, X_test, y_train, y_test = cast(
+    list[np.ndarray],
+    train_test_split(X, y, test_size=0.2, random_state=42))
+
 gm = GaussianMixture(n_components=3, n_init=10)
 gm.fit(X_train)
 
@@ -140,3 +154,10 @@ gms = [GaussianMixture(
     for k in range(1, 11)]
 bics = [model.bic(X_train) for model in gms]
 aics = [model.aic(X_train) for model in gms]
+
+# Bayesian Gaussian Mixture
+# Give weights either equal or close to zero to unnecessary clusters
+bgm = BayesianGaussianMixture(
+    n_components=10, n_init=10, random_state=42)
+bgm.fit(X_train)
+bgm.weights_.round(2)
